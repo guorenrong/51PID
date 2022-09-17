@@ -193,14 +193,19 @@ U8  xdata COM1_Send_Ptr;
 float  xdata  kp_TempCal;
 float  xdata  ki_TempCal;
 
+U8     xdata  at_TC = 0;     // 0, disable, 1, enable.
+float  xdata  kp_TC = 30;
+float  xdata  ki_TC = 120;
+float  xdata  kd_TC = 30;
+float  xdata  kt_TC = 20;
+float  xdata  oh_TC = 2;     //主控回差，kp_TC == 0 显示
+float  xdata  ar_TC = 80;    //积分过冲抑制，kp_TC ==0 时不显示
 
-float  xdata  kp_TC;
-float  xdata  ki_TC;
-float  xdata  kd_TC;
-float  xdata  kt_TC = 10;
+U8     xdata  lock_sys = 0; // 000(Bin)所有参数均可修改，001 SV,AL1,AL2可以修改，011 SV可以修改，111全部不可以修改.
 
 float  xdata  TempSet_Point;
 float  xdata  Temp_Disp_Tolerance;
+U8  xdata  Temp_Disp_Tolerance_Factor;
 U8 xdata    Temp_Disp_Tolerance_Enable = 0;
 float  xdata  Temp_SetHigh;
 float  xdata  Temp_SetLow;
@@ -254,12 +259,15 @@ void ScanKey4(void);
 void Delay4us(void);
 void HC595SendData(unsigned char SendVal);
 void HC595ShowData();
-void select1();
-void select2();
-void select3();
-void select4();
-void select5();
-void select6();
+void select11();
+void select12();
+void select13();
+void select14();
+void select21();
+void select22();
+void select23();
+void select24();
+void selectled();
 
 
 void ParseDataFrom_PC(void);
@@ -569,7 +577,7 @@ U16 get_set_value(U8 disp_what)
 			{
 				if((TempData_Current >= TempSet_Point - Temp_Disp_Tolerance) && (TempData_Current <= TempSet_Point + Temp_Disp_Tolerance))
 				{
-					res = (0.2*(TempData_Current-TempSet_Point)+TempSet_Point)*10;
+					res = ((TempData_Current-TempSet_Point)/Temp_Disp_Tolerance_Factor+TempSet_Point)*10;
 				}
 				else if(TempData_Current > TempSet_Point + Temp_Disp_Tolerance)
 				{
@@ -769,10 +777,10 @@ void main (void)
   
 	timer0_init();
 	
-	uart1_timer2_init();
+	//uart1_timer2_init();
 	
-	 adc_control_init();
-   adc_init();
+	 //adc_control_init();
+   //adc_init();
   
 	
 	K1 = 0;
@@ -785,8 +793,7 @@ void main (void)
 	
 	
 	
-	Value=28888;
-	Value4=Value/10000;Value=Value%10000;
+	Value=2888;
 	Value3=Value/1000;Value=Value%1000;
 	Value2=Value/100;Value=Value%100; 
 	Value1=Value/10;Value=Value%10; 
@@ -893,57 +900,70 @@ kp_TempCal = ReadFloat(0x38);
 					Flag_B_500ms = 0;
 				}
 
-				if(EDIT_enable == 1 && Splinking == 1 && B_Keypush == 0)
-				{			
-					Value0 = 11;
-					Value1 = 11;
-					Value2 = 11;
-					Value4 = 11;
-					Value3 = 11;
-				}
+				// if(EDIT_enable == 1 && Splinking == 1 && B_Keypush == 0)
+				// {			
+				// 	Value0 = 11;
+				// 	Value1 = 11;
+				// 	Value2 = 11;
+				// 	Value4 = 11;
+				// 	Value3 = 11;
+				// }
 
-				HC595SendData(tab[Value0]);//发送数据		
+				//HC595SendData(0x80);//发送数据		
 				
-				//HC595SendData(tab[10]);//发送数据		
+				//HC595SendData(tab[0]);//发送数据		
+				HC595SendData(tab[2]);//发送数据	
 				//HC595SendData(0xff);
 				//HC595SendData(0xff);
-				HC595ShowData();//RCK_595产生一上升沿(输出数据)
-				select1();
+				//HC595ShowData();//RCK_595产生一上升沿(输出数据)
+				select11();
+				
 				
 				if(DISPLAY_what == NORMAL_DISPLAY)
 				{
-					HC595SendData(tab[Value1]&0x7F);
+					HC595SendData(tab[2]&0x7F);
 				}
 				else
 				{
-					HC595SendData(tab[Value1]);//发送数据
+					//HC595SendData(0x80);//发送数据
+					//HC595SendData(tab[0]);//发送数据	
+					HC595SendData(tab[2]);//发送数据	
 				}
 				//HC595SendData(tab[10]);//发送数据
 				//HC595SendData(tab[1]);//发送数据
 				//HC595SendData(0x01);
-				HC595ShowData();//RCK_595产生一上升沿(输出数据)
-				select2();
+				//HC595ShowData();//RCK_595产生一上升沿(输出数据)
+				select12();
 				//bsp_delay_ms (20);      //延时后LED4亮
 				
-				HC595SendData(tab[Value2]);//发送数据
-
+				//HC595SendData(0x80);//发送数据
+				HC595SendData(tab[2]);//发送数据
 				
 
-				HC595ShowData();//RCK_595产生一上升沿(输出数据)
-				select3();
+				//HC595ShowData();//RCK_595产生一上升沿(输出数据)
+				select13();
 				//HC595SendData(tab[Value3]&0x7f);//发送数据
-				HC595SendData(tab[Value3]);//发送数据
-				HC595ShowData();//RCK_595产生一上升沿(输出数据)
-				select4();
+				//HC595SendData(0x80);//发送数据
+				HC595SendData(tab[2]);//发送数据
+				//HC595ShowData();//RCK_595产生一上升沿(输出数据)
+				select14();
 
-				HC595SendData(tab[Value4]);//发送数据
-				HC595ShowData();//RCK_595产生一上升沿(输出数据)
-				select5();
-				HC595SendData(tab[LED_Data]&value_LED_Running);//发送数据
-				//HC595SendData(tab[LED_Data]);//发送数据
-				HC595ShowData();//RCK_595产生一上升沿(输出数据)
-				select6();
+				// HC595SendData(tab[Value4]);//发送数据
+				// HC595ShowData();//RCK_595产生一上升沿(输出数据)
+				// select5();
+				// HC595SendData(tab[LED_Data]&value_LED_Running);//发送数据
+				// //HC595SendData(tab[LED_Data]);//发送数据
+				// HC595ShowData();//RCK_595产生一上升沿(输出数据)
+				// select6();
 				
+				HC595SendData(tab[2]);//发送数据
+				select21();
+                HC595SendData(tab[2]);//发送数据
+				select22();
+				HC595SendData(tab[2]);//发送数据
+				select23();
+                HC595SendData(tab[2]);//发送数据
+				select24();
 
 		
 		    /////////////////////////////////////////////////********  LED  Dispaly
@@ -952,7 +972,7 @@ kp_TempCal = ReadFloat(0x38);
 			{
 				case NORMAL_DISPLAY: // display the normal temperature here.
 					LED_Data = 17;
-					Value = (NORMAL_DISPLAY);
+					Value = get_set_value(NORMAL_DISPLAY);
 					Value4=Value/10000;Value=Value%10000;
 					Value3=Value/1000;Value=Value%1000;
 					Value2=Value/100;Value=Value%100; 
@@ -1311,7 +1331,7 @@ kp_TempCal = ReadFloat(0x38);
 						B_BackMainMU=0x01;
 						CNT_BackMainMU=0x00;
 					}
-					DISPLAY_what--;
+					DISPLAY_what--; 
 					if(DISPLAY_what == 0)
 					{
 						DISPLAY_what = DISPLAY_MAX -1;
@@ -1435,50 +1455,59 @@ LED4  P1.2
 *******************************************************************************************/
 void gpio_init(void)
 {
-	PORTIDX = PORT0;
-	
-	PINMOD76= PINMOD32 & ~0xf0 | PIN_H_Mode_PP;                       //P07    SHCP1
-	P0_7 = 0;
-	//PINMOD76= PINMOD32 & ~0x0f | PIN_L_Mode_PP;                       //P06    GPIO
-	//P0_6 = 0;
-	
-	PINMOD54 = PINMOD54 & ~0x0f | PIN_L_Mode_PP;	                    //P04    D4
-	P0_4 = 1;
-	PINMOD32 = PINMOD32 & ~0xf0 | PIN_H_Mode_PP;                      //P03    D3
-	P0_3 = 1;
-	
-	
-	PORTIDX = PORT1;
-	PINMOD76 = PINMOD76 & ~0xF0 | PIN_H_Mode_PP;	                    //p17   STCP1
-	P1_7 = 0;
-	PINMOD76 = PINMOD76 & ~0x0f | PIN_L_Mode_PP;	                    //p16   DS1
-	P1_6 = 0;
-	//PORTIDX = PORT1;
-	PINMOD54 = PINMOD54 & ~0xf0 | PIN_H_Mode_PP;	                    //P15
-	P1_5 = 1;
-	PINMOD54 = PINMOD54 & ~0x0f | PIN_L_Mode_PP;	                    //P14
-	P1_4 = 1;
-	
-	PINMOD32 = PINMOD32 & ~0xF0 | PIN_H_Mode_OD_IPU_WAKEUP;   // key1  P1.3  
-	PINMOD32 = PINMOD32 & ~0x0f | PIN_L_Mode_OD_IPU_WAKEUP;   // key1  P1.2  
-	PINMOD10 = PINMOD10 & ~0xf0 | PIN_H_Mode_OD_IPU_WAKEUP;   // key1  P1.1  
-	PINMOD10 = PINMOD10 & ~0x0f | PIN_L_Mode_OD_IPU_WAKEUP;   // key1  P1.0    
-	
-	PORTIDX = PORT2;
-	
-	PINMOD54 = PINMOD54 & ~0x0f | PIN_L_Mode_PP;	 //P2.4   D6
-	P2_4 = 1;
-	PINMOD32 = PINMOD32 & ~0xf0 | PIN_H_Mode_PP;                      //P23   GPIO
+/////////////////////////////////////////////////////////////////
+   
+	PORTIDX = PORT3;
+	PINMOD32 = PINMOD32 & ~0x0f | PIN_L_Mode_PP;	                    //P32  com1
+	P3_2 = 0; 
+  PORTIDX = PORT3;
+	PINMOD32 = PINMOD32 & ~0xF0 | PIN_H_Mode_PP;	                    //P33  com2
+	P3_3 = 0;   
+
+  PORTIDX = PORT2;
+	PINMOD32 = PINMOD32 & ~0xf0 | PIN_H_Mode_PP;                      //P23   .com3
 	P2_3 = 0;
-	
-	PINMOD10 = PINMOD10 & ~0xf0 | PIN_H_Mode_PP;   // P2.1  D2
-	PINMOD10 = PINMOD10 & ~0x0f | PIN_L_Mode_PP;   // P2.0  D3  
+  PINMOD54 = PINMOD54 & ~0x0f | PIN_L_Mode_PP;	 										//P2.4   com4
+	P2_4 = 0;
+
+  PORTIDX = PORT0;
+	PINMOD32 = PINMOD32 & ~0x0f | PIN_L_Mode_PP;                      //P02    com5
+	P0_2 = 0;
+	PINMOD32 = PINMOD32 & ~0xf0 | PIN_H_Mode_PP;                      //P03    com6
+	P0_3 = 0;
+	PINMOD76= PINMOD32 & ~0x0f | PIN_L_Mode_PP;                       //P06    com7
+	P0_6 = 0;	
+	PINMOD76= PINMOD32 & ~0xf0 | PIN_H_Mode_PP;                       //P07    com8
+	P0_7 = 0;
 	
 	PORTIDX = PORT3;
-	PINMOD76 = PINMOD76 & ~0xF0 | PIN_H_Mode_PP;	                    //P37   D1
-	P3_7 = 1;
+	PINMOD10 = PINMOD10 & ~0xf0 | PIN_H_Mode_PP;	                    //P31    com9
+	P3_1 = 0; 
 	
+  PORTIDX = PORT3;
+	PINMOD10 = PINMOD10 & ~0x0f | PIN_L_Mode_PP;	                    //P30    K1
+	P3_0 = 0; 
+	 
+	 
+	PORTIDX = PORT3;
+	PINMOD76 = PINMOD76 & ~0xF0 | PIN_H_Mode_OD_IPU_WAKEUP;    //P3.7 	key1  
+  PORTIDX = PORT2;
+	PINMOD10 = PINMOD10 & ~0xf0 | PIN_H_Mode_OD_IPU_WAKEUP;    //P2.1  	key2  
+	PINMOD10 = PINMOD10 & ~0x0f | PIN_L_Mode_OD_IPU_WAKEUP;    //P2.0   key3  
+	PORTIDX = PORT0;
+	PINMOD54 = PINMOD54 & ~0x0f | PIN_L_Mode_OD_IPU_WAKEUP;    //P0.4 	key1  
+	 
+	PORTIDX = PORT1; 
+	PINMOD10 = PINMOD10 & ~0x0f | PIN_L_Mode_PP;   						//P1.0  A0  
+	PINMOD10 = PINMOD10 & ~0xf0 | PIN_H_Mode_PP;   						//P1.1  B0  
+	PINMOD32 = PINMOD32 & ~0x0f | PIN_L_Mode_PP;   						//P1.2  C0 	
+  PINMOD32 = PINMOD32 & ~0xF0 | PIN_H_Mode_PP;   						//P1.3  D0  
 	
+	PINMOD54 = PINMOD54 & ~0x0f | PIN_L_Mode_PP;    					// P1.4  E0
+	PINMOD76 = PINMOD76 & ~0x0f| PIN_L_Mode_PP;    					  // P1.6  G0
+	PINMOD54 = PINMOD54 & ~0xf0| PIN_H_Mode_PP;    			      // P1.5  F0
+	
+	PINMOD76 = PINMOD76 & ~0xF0 | PIN_H_Mode_ADC;             ////P1.7  ADC  CH 12
 	
 	
 }
@@ -1711,32 +1740,19 @@ void Delay4us(void)
 	//for(i=0; i<16; i++);
 	for(i=0; i<5; i++);
 }
+
 void HC595SendData(unsigned char SendVal)//发送数据
 {  
    
-	 //P0_7	SHCP1  SCK1_595  
-	 //p1_6	DS1    SI1_595
-	 //p1_7	STCP1
-
-	
-	
-	
-	unsigned char i;
-  for(i=0;i<8;i++) 
-   {
-		if((SendVal<<i)&0x80) P1_6=1;//SI1_595=1;
-		else P1_6=0;//SI1_595=0;
-		 
-		P0_7=0;//SCK1_595=0;//从SCK_595产生一上升沿(移入数据)
-		//_nop_();
-		//_nop_();
-		 //Delay4us(); 
-		 Delay4us(); 
-		 
-		P0_7=1;//SCK1_595=1; 
-   }
-	
+	 P1_0 = ((SendVal & 0x01) != 0)?1:0; // A0
+	 P1_1 = ((SendVal & 0x02) != 0)?1:0; // B0
+	 P1_2 = ((SendVal & 0x04) != 0)?1:0; // C0
+	 P1_3 = ((SendVal & 0x08) != 0)?1:0; // D0
+	 P1_4 = ((SendVal & 0x10) != 0)?1:0; // E0
+	 P1_6 = ((SendVal & 0x40) != 0)?1:0; // G0
+	 P1_5 = ((SendVal & 0x20) != 0)?1:0; // F0	
 } 
+
 void HC595ShowData()
 {
   P1_7=0;		//	RCK1_595=0;
@@ -1747,61 +1763,115 @@ void HC595ShowData()
 	
   P1_7=1;		//  RCK1_595=1; 
 }
-void select1()
+
+void select11()
 {
-  P3_7 = 0;//P3.7  D1
-	P2_1 = 1;//P2.1  D2
-	P2_0 = 1;//P2.0  D3  	
-  P0_4 = 1;//P0.4  D4
-	P0_3 = 1;//P0.3  D5
-	P2_4 = 1;//P2.4  D6
-	
+  P3_2 = 1;  //P3.2 COM1
+  P3_3 = 0;  //P3.3 COM2
+  P2_3 = 0;  //P2.3 COM3  	
+  P2_4 = 0;  //P2.4 COM4
+  P0_2 = 0;  //P0.2 COM5
+  P0_3 = 0;  //P0.3 COM6
+  P0_6 = 0;  //P0.6 COM7
+  P0_7 = 0;  //P0.7 COM8
+  P3_1 = 0;  //P3.1 COM9
 }	
-void select2()
+void select12()
 {
-  P3_7 = 1;//P3.7  D1
-	P2_1 = 0;//P2.1  D2
-	P2_0 = 1;//P2.0  D3  	
-  P0_4 = 1;//P0.4  D4
-	P0_3 = 1;//P0.3  D5
-	P2_4 = 1;//P2.4  D6
+  P3_2 = 0;  //P3.2 COM1
+  P3_3 = 1;  //P3.3 COM2
+  P2_3 = 0;  //P2.3 COM3  	
+  P2_4 = 0;  //P2.4 COM4
+  P0_2 = 0;  //P0.2 COM5
+  P0_3 = 0;  //P0.3 COM6
+  P0_6 = 0;  //P0.6 COM7
+  P0_7 = 0;  //P0.7 COM8
+  P3_1 = 0;  //P3.1 COM9
 }	
-void select3()
+void select13()
 {
-  P3_7 = 1;//P3.7  D1
-	P2_1 = 1;//P2.1  D2
-	P2_0 = 0;//P2.0  D3  	
-  P0_4 = 1;//P0.4  D4
-	P0_3 = 1;//P0.3  D5
-	P2_4 = 1;//P2.4  D6
+  P3_2 = 0;  //P3.2 COM1
+  P3_3 = 0;  //P3.3 COM2
+  P2_3 = 1;  //P2.3 COM3  	
+  P2_4 = 0;  //P2.4 COM4
+  P0_2 = 0;  //P0.2 COM5
+  P0_3 = 0;  //P0.3 COM6
+  P0_6 = 0;  //P0.6 COM7
+  P0_7 = 0;  //P0.7 COM8
+  P3_1 = 0;  //P3.1 COM9
 }	
-void select4()
+void select14()
 {
-  P3_7 = 1;//P3.7  D1
-	P2_1 = 1;//P2.1  D2
-	P2_0 = 4;//P2.0  D3  	
-  P0_4 = 0;//P0.4  D4
-	P0_3 = 1;//P0.3  D5
-	P2_4 = 1;//P2.4  D6
+  P3_2 = 0;  //P3.2 COM1
+  P3_3 = 0;  //P3.3 COM2
+  P2_3 = 0;  //P2.3 COM3  	
+  P2_4 = 1;  //P2.4 COM4
+  P0_2 = 0;  //P0.2 COM5
+  P0_3 = 0;  //P0.3 COM6
+  P0_6 = 0;  //P0.6 COM7
+  P0_7 = 0;  //P0.7 COM8
+  P3_1 = 0;  //P3.1 COM9
 }	
-void select5()
+void select21()
 {
-  P3_7 = 1;//P3.7  D1
-	P2_1 = 1;//P2.1  D2
-	P2_0 = 1;//P2.0  D3  	
-  P0_4 = 1;//P0.4  D4
-	P0_3 = 0;//P0.3  D5
-	P2_4 = 1;//P2.4  D6
+  P3_2 = 0;  //P3.2 COM1
+  P3_3 = 0;  //P3.3 COM2
+  P2_3 = 0;  //P2.3 COM3  	
+  P2_4 = 0;  //P2.4 COM4
+  P0_2 = 1;  //P0.2 COM5
+  P0_3 = 0;  //P0.3 COM6
+  P0_6 = 0;  //P0.6 COM7
+  P0_7 = 0;  //P0.7 COM8
+  P3_1 = 0;  //P3.1 COM9
 }	
-void select6()
+void select22()
 {
-  P3_7 = 1;//P3.7  D1
-	P2_1 = 1;//P2.1  D2
-	P2_0 = 1;//P2.0  D3  	
-  P0_4 = 1;//P0.4  D4
-	P0_3 = 1;//P0.3  D5
-	P2_4 = 0;//P2.4  D6
+  P3_2 = 0;  //P3.2 COM1
+  P3_3 = 0;  //P3.3 COM2
+  P2_3 = 0;  //P2.3 COM3  	
+  P2_4 = 0;  //P2.4 COM4
+  P0_2 = 0;  //P0.2 COM5
+  P0_3 = 1;  //P0.3 COM6
+  P0_6 = 0;  //P0.6 COM7
+  P0_7 = 0;  //P0.7 COM8
+  P3_1 = 0;  //P3.1 COM9
 }	
+void select23()
+{
+  P3_2 = 0;  //P3.2 COM1
+  P3_3 = 0;  //P3.3 COM2
+  P2_3 = 0;  //P2.3 COM3  	
+  P2_4 = 0;  //P2.4 COM4
+  P0_2 = 0;  //P0.2 COM5
+  P0_3 = 0;  //P0.3 COM6
+  P0_6 = 1;  //P0.6 COM7
+  P0_7 = 0;  //P0.7 COM8
+  P3_1 = 0;  //P3.1 COM9
+}	
+void select24()
+{
+  P3_2 = 0;  //P3.2 COM1
+  P3_3 = 0;  //P3.3 COM2
+  P2_3 = 0;  //P2.3 COM3  	
+  P2_4 = 0;  //P2.4 COM4
+  P0_2 = 0;  //P0.2 COM5
+  P0_3 = 0;  //P0.3 COM6
+  P0_6 = 0;  //P0.6 COM7
+  P0_7 = 1;  //P0.7 COM8
+  P3_1 = 0;  //P3.1 COM9
+}	
+void selectled()
+{
+  P3_2 = 0;  //P3.2 COM1
+  P3_3 = 0;  //P3.3 COM2
+  P2_3 = 0;  //P2.3 COM3  	
+  P2_4 = 0;  //P2.4 COM4
+  P0_2 = 0;  //P0.2 COM5
+  P0_3 = 0;  //P0.3 COM6
+  P0_6 = 0;  //P0.6 COM7
+  P0_7 = 0;  //P0.7 COM8
+  P3_1 = 1;  //P3.1 COM9
+}
 
 void BackCurrentDataTo_PC(void)
 {
